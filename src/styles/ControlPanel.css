@@ -1,0 +1,213 @@
+.control-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+.control-panel.expanded {
+  transform: translateY(0);
+}
+
+.control-panel.collapsed {
+  transform: translateY(calc(100% - 50px));
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.toggle-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.tab.active {
+  color: white;
+  border-bottom: 2px solid #3498db;
+}
+
+.tab-content {
+  padding: 15px 20px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Faces Tab */
+.faces-tab h4, .settings-tab h4, .effects-tab h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.no-faces {
+  text-align: center;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.face-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.face-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.face-item:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.face-item.selected {
+  background-color: rgba(52, 152, 219, 0.3);
+  border-left: 3px solid #3498db;
+}
+
+.face-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.face-icon {
+  font-size: 24px;
+}
+
+.face-info {
+  margin-left: 12px;
+  font-size: 14px;
+}
+
+.clear-selection-btn {
+  margin-top: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.clear-selection-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.clear-selection-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Settings Tab */
+.setting-item {
+  margin-bottom: 15px;
+}
+
+.setting-item label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.setting-item input[type="checkbox"] {
+  margin-right: 10px;
+  width: 16px;
+  height: 16px;
+}
+
+.setting-item input[type="range"] {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Effects Tab */
+.effects-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.effect-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.effect-item:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.effect-item.active {
+  background-color: rgba(52, 152, 219, 0.3);
+  box-shadow: 0 0 0 1px rgba(52, 152, 219, 0.5);
+}
+
+.effect-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.effect-item span {
+  font-size: 12px;
+} 

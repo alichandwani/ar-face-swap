@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Face Swap Demo</title>
+    <!-- Add face-api.js and TensorFlow.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #121212;
+            color: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            z-index: 10;
+        }
+        
+        .app-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .performance-metrics {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            font-family: monospace;
+        }
+        
+        .app-content {
+            flex: 1;
+            position: relative;
+            background-color: #1a1a1a;
+            overflow: hidden;
+        }
+        
+        .ar-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .webcam-video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror view */
+        }
+        
+        .ar-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            transform: scaleX(-1); /* Mirror view */
+        }
+        
+        .faces-detected {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 10;
+            font-family: monospace;
+        }
+        
+        .control-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 10;
+            transition: transform 0.3s ease;
+        }
+        
+        .control-panel.expanded {
+            transform: translateY(0);
+        }
+        
+        .control-panel.collapsed {
+            transform: translateY(calc(100% - 50px));
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+        }
+        
+        .panel-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .toggle-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+        }
+        
+        .tab.active {
+            color: white;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .tab-content {
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #121212;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-container {
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .loading-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3498db;
+            animation: spin 1s infinite linear;
+            margin: 0 auto 20px;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #3498db, #9b59b6);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .error-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .error-message {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 600px;
+            text-align: center;
+        }
+        
+        .error-message h2 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        
+        .error-message button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .face-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .face-item.selected {
+            background-color: rgba(52, 152, 219, 0.3);
+            border-left: 3px solid #3498db;
+        }
+
+        .face-thumbnail {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+        }
+
+        .face-icon {
+            font-size: 24px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-container">
+                <div class="loading-circle"></div>
+                <h2>Loading AR Face Swap</h2>
+                <p>Initializing face detection and AR systems...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p id="loadingStatus">Loading components...</p>
+            </div>
+        </div>
+        
+        <div class="error-screen" id="errorScreen" style="display: none;">
+            <div class="error-message">
+                <h2>Camera Access Required</h2>
+                <p>This demo requires access to your camera to detect faces and demonstrate AR face swap capabilities.</p>
+                <p>Please allow camera access when prompted by your browser.</p>
+                <button id="retryButton">Retry</button>
+            </div>
+        </div>
+        
+        <div class="app-container">
+            <header class="app-header">
+                <h1>AR Face Swap</h1>
+                <div class="performance-metrics">
+                    <span>FPS: <span id="fpsMeter">0</span></span>
+                    <span>Faces: <span id="facesCounter">0</span></span>
+                </div>
+            </header>
+            
+            <main class="app-content">
+                <div class="ar-container">
+                    <video id="webcamVideo" class="webcam-video" autoplay playsinline muted></video>
+                    <canvas id="arCanvas" class="ar-canvas"></canvas>
+                    <div class="faces-detected">
+                        <span>Detected: <span id="facesDetected">0</span></span>
+                    </div>
+                </div>
+            </main>
+            
+            <div class="control-panel expanded" id="controlPanel">
+                <div class="panel-header" id="panelHeader">
+                    <h3>Controls</h3>
+                    <button class="toggle-button" id="toggleButton">↓</button>
+                </div>
+                
+                <div class="panel-content" id="panelContent">
+                    <div class="tabs">
+                        <button class="tab active" data-tab="faces">Faces</button>
+                        <button class="tab" data-tab="settings">Settings</button>
+                        <button class="tab" data-tab="effects">Effects</button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div id="facesTab" class="tab-panel active">
+                            <p>Position multiple faces in the camera view to enable face swapping.</p>
+                            <div id="facesList">
+                                <!-- Face items will be added here dynamically -->
+                            </div>
+                        </div>
+                        
+                        <div id="settingsTab" class="tab-panel" style="display: none;">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center;">
+                                    <input type="checkbox" id="preserveExpressions" checked> Preserve Expressions
+                                </label>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: flex; align-items: center;">
+                                    <input type="checkbox" id="preserveSkinTone"> Preserve Skin Tone
+                                </label>
+                            </div>
+                            <div>
+                                <label for="effectIntensity">Effect Intensity: <span id="intensityValue">75</span>%</label>
+                                <input type="range" id="effectIntensity" min="0" max="100" value="75" style="width: 100%;">
+                            </div>
+                        </div>
+                        
+                        <div id="effectsTab" class="tab-panel" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center; border: 1px solid #3498db;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">🔄</div>
+                                    <span>Face Swap</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">✨</div>
+                                    <span>Beauty</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">🎨</div>
+                                    <span>Style</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">😀</div>
+                                    <span>Emotion</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">🎭</div>
+                                    <span>Masks</span>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 4px; text-align: center;">
+                                    <div style="font-size: 24px; margin-bottom: 8px;">⚙️</div>
+                                    <span>Advanced</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // DOM elements
+            const loadingScreen = document.getElementById('loadingScreen');
+            const errorScreen = document.getElementById('errorScreen');
+            const retryButton = document.getElementById('retryButton');
+            const progressFill = document.getElementById('progressFill');
+            const loadingStatus = document.getElementById('loadingStatus');
+            const webcamVideo = document.getElementById('webcamVideo');
+            const arCanvas = document.getElementById('arCanvas');
+            const facesDetected = document.getElementById('facesDetected');
+            const facesCounter = document.getElementById('facesCounter');
+            const fpsMeter = document.getElementById('fpsMeter');
+            const controlPanel = document.getElementById('controlPanel');
+            const toggleButton = document.getElementById('toggleButton');
+            const panelHeader = document.getElementById('panelHeader');
+            const tabs = document.querySelectorAll('.tab');
+            const facesList = document.getElementById('facesList');
+            const effectIntensity = document.getElementById('effectIntensity');
+            const intensityValue = document.getElementById('intensityValue');
+            const preserveExpressions = document.getElementById('preserveExpressions');
+            const preserveSkinTone = document.getElementById('preserveSkinTone');
+            
+            // Canvas context
+            const ctx = arCanvas.getContext('2d');
+            
+            // Detection state
+            let detectedFaces = [];
+            let selectedFaceId = null;
+            let isSwapping = false;
+            let frameCount = 0;
+            let lastTime = 0;
+            let fps = 0;
+            let detectionInterval = null;
+            
+            // Settings
+            let swapSettings = {
+                intensity: 75,
+                preserveExpressions: true,
+                preserveSkinTone: false
+            };
+            
+            // Load the face-api.js models
+            async function loadFaceApiModels() {
+                loadingStatus.textContent = "Loading face detection models...";
+                progressFill.style.width = '10%';
+                
+                try {
+                    // Create a path for models
+                    const modelPath = 'https://justadudewhohacks.github.io/face-api.js/models';
+                    
+                    // Load models
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
+                        faceapi.nets.faceLandmark68Net.loadFromUri(modelPath),
+                        progressFill.style.width = '30%',
+                        loadingStatus.textContent = "Loading face landmarks model...",
+                        
+                        faceapi.nets.faceRecognitionNet.loadFromUri(modelPath),
+                        progressFill.style.width = '60%',
+                        loadingStatus.textContent = "Loading face recognition model...",
+                        
+                        faceapi.nets.faceExpressionNet.loadFromUri(modelPath)
+                    ]);
+                    
+                    progressFill.style.width = '90%';
+                    loadingStatus.textContent = "Models loaded successfully!";
+                    return true;
+                } catch (error) {
+                    console.error('Error loading face-api.js models:', error);
+                    errorScreen.style.display = 'flex';
+                    loadingScreen.style.display = 'none';
+                    return false;
+                }
+            }
+            
+            // Initialize the application
+            async function initializeApp() {
+                // Load face-api.js models
+                const modelsLoaded = await loadFaceApiModels();
+                if (!modelsLoaded) return;
+                
+                // Request camera access
+                try {
+                    loadingStatus.textContent = "Requesting camera access...";
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    webcamVideo.srcObject = stream;
+                    
+                    webcamVideo.onloadedmetadata = () => {
+                        // Set canvas dimensions to match video
+                        arCanvas.width = webcamVideo.videoWidth;
+                        arCanvas.height = webcamVideo.videoHeight;
+                        
+                        // Hide loading screen
+                        progressFill.style.width = '100%';
+                        loadingStatus.textContent = "Starting application...";
+                        
+                        setTimeout(() => {
+                            loadingScreen.style.opacity = '0';
+                            setTimeout(() => {
+                                loadingScreen.style.display = 'none';
+                            }, 500);
+                        }, 500);
+                        
+                        // Start detection and animation
+                        startFaceDetection();
+                        requestAnimationFrame(updateCanvas);
+                    };
+                } catch (error) {
+                    console.error('Error accessing camera:', error);
+                    errorScreen.style.display = 'flex';
+                    loadingScreen.style.display = 'none';
+                }
+            }
+            
+            // Start face detection using face-api.js
+            function startFaceDetection() {
+                // Set up detection options
+                const detectionOptions = new faceapi.TinyFaceDetectorOptions({
+                    inputSize: 512,
+                    scoreThreshold: 0.5
+                });
+                
+                // Start detection loop
+                detectionInterval = setInterval(async () => {
+                    if (webcamVideo.paused || webcamVideo.ended) return;
+                    
+                    try {
+                        // Run detection
+                        const detections = await faceapi.detectAllFaces(
+                            webcamVideo, 
+                            detectionOptions
+                        )
+                        .withFaceLandmarks()
+                        .withFaceExpressions();
+                        
+                        // Process detections
+                        detectedFaces = detections.map((detection, index) => {
+                            const existingFace = detectedFaces.find(
+                                (face, idx) => idx === index && 
+                                Math.abs(face.detection.box.x - detection.detection.box.x) < 20 &&
+                                Math.abs(face.detection.box.y - detection.detection.box.y) < 20
+                            );
+                            
+                            return {
+                                id: existingFace?.id || `face-${Date.now()}-${index}`,
+                                detection: detection.detection,
+                                landmarks: detection.landmarks,
+                                expressions: detection.expressions
+                            };
+                        });
+                        
+                        // Update UI
+                        facesDetected.textContent = detectedFaces.length;
+                        facesCounter.textContent = detectedFaces.length;
+                        updateFacesList();
+                        
+                        // If we have at least 2 faces and one is selected, enable swapping
+                        isSwapping = detectedFaces.length >= 2 && selectedFaceId !== null;
+                        
+                    } catch (error) {
+                        console.error('Face detection error:', error);
+                    }
+                }, 100); // Run detection every 100ms
+            }
+            
+            // Update faces list in UI
+            function updateFacesList() {
+                // Clear list
+                facesList.innerHTML = '';
+                
+                if (detectedFaces.length === 0) {
+                    const message = document.createElement('p');
+                    message.className = 'no-faces';
+                    message.textContent = 'No faces detected. Position your face in frame.';
+                    facesList.appendChild(message);
+                    return;
+                }
+                
+                // Add faces to the list
+                detectedFaces.forEach((face) => {
+                    const faceItem = document.createElement('div');
+                    faceItem.className = `face-item ${face.id === selectedFaceId ? 'selected' : ''}`;
+                    faceItem.dataset.faceId = face.id;
+                    
+                    const thumbnail = document.createElement('div');
+                    thumbnail.className = 'face-thumbnail';
+                    const icon = document.createElement('div');
+                    icon.className = 'face-icon';
+                    icon.textContent = '👤';
+                    thumbnail.appendChild(icon);
+                    
+                    const info = document.createElement('div');
+                    const expression = getTopExpression(face.expressions);
+                    info.textContent = `Face #${face.id.substring(face.id.lastIndexOf('-') + 1)} (${expression})`;
+                    
+                    faceItem.appendChild(thumbnail);
+                    faceItem.appendChild(info);
+                    faceItem.addEventListener('click', () => selectFace(face.id));
+                    
+                    facesList.appendChild(faceItem);
+                });
+                
+                // Add clear selection button if a face is selected
+                if (selectedFaceId) {
+                    const clearButton = document.createElement('button');
+                    clearButton.className = 'clear-selection-btn';
+                    clearButton.textContent = 'Clear Selection';
+                    clearButton.addEventListener('click', () => selectFace(null));
+                    facesList.appendChild(clearButton);
+                }
+            }
+            
+            // Get top expression for a face
+            function getTopExpression(expressions) {
+                if (!expressions) return 'neutral';
+                
+                let topExpression = 'neutral';
+                let maxScore = 0;
+                
+                Object.entries(expressions).forEach(([expression, score]) => {
+                    if (score > maxScore) {
+                        maxScore = score;
+                        topExpression = expression;
+                    }
+                });
+                
+                return topExpression;
+            }
+            
+            // Select a face for swapping
+            function selectFace(faceId) {
+                selectedFaceId = faceId;
+                updateFacesList();
+            }
+            
+            // Update canvas with AR overlay
+            function updateCanvas(time) {
+                if (!lastTime) lastTime = time;
+                
+                // Calculate FPS
+                frameCount++;
+                if (time - lastTime >= 1000) {
+                    fps = Math.round((frameCount * 1000) / (time - lastTime));
+                    frameCount = 0;
+                    lastTime = time;
+                    fpsMeter.textContent = fps;
+                }
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, arCanvas.width, arCanvas.height);
+                
+                // Draw face outlines and landmarks
+                detectedFaces.forEach((face) => {
+                    const box = face.detection.box;
+                    
+                    // Draw face box
+                    ctx.strokeStyle = face.id === selectedFaceId ? '#e74c3c' : '#3498db';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                    
+                    // Draw face mesh points
+                    if (face.landmarks) {
+                        const positions = face.landmarks.positions;
+                        positions.forEach(point => {
+                            ctx.fillStyle = '#2ecc71';
+                            ctx.beginPath();
+                            ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                    
+                    // Draw face ID
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(`Face #${face.id.substring(face.id.lastIndexOf('-') + 1)}`, box.x, box.y - 5);
+                    
+                    // If this is the target face for swapping, add visual indicator
+                    if (face.id === selectedFaceId) {
+                        ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+                        ctx.fillRect(box.x, box.y, box.width, box.height);
+                        
+                        // If we're swapping with another face, draw connection
+                        if (isSwapping) {
+                            const otherFaces = detectedFaces.filter(f => f.id !== selectedFaceId);
+                            if (otherFaces.length > 0) {
+                                // Find closest face to swap with
+                                const targetFace = otherFaces[0];
+                                const targetBox = targetFace.detection.box;
+                                
+                                // Draw connection between faces
+                                ctx.strokeStyle = '#e74c3c';
+                                ctx.lineWidth = 2;
+                                ctx.setLineDash([5, 5]);
+                                ctx.beginPath();
+                                ctx.moveTo(box.x + box.width/2, box.y + box.height/2);
+                                ctx.lineTo(targetBox.x + targetBox.width/2, targetBox.y + targetBox.height/2);
+                                ctx.stroke();
+                                ctx.setLineDash([]);
+                                
+                                // Add swap indicator on the target face
+                                ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
+                                ctx.fillRect(targetBox.x, targetBox.y, targetBox.width, targetBox.height);
+                                
+                                // Simulate face swap by drawing a mixed-opacity version of the source face
+                                // This is a simplified visualization - real face swapping would use more complex techniques
+                                const intensity = swapSettings.intensity / 100;
+                                ctx.globalAlpha = intensity;
+                                ctx.drawImage(
+                                    webcamVideo,
+                                    box.x, box.y, box.width, box.height,
+                                    targetBox.x, targetBox.y, targetBox.width, targetBox.height
+                                );
+                                ctx.globalAlpha = 1.0;
+                            }
+                        }
+                    }
+                });
+                
+                requestAnimationFrame(updateCanvas);
+            }
+            
+            // Settings event listeners
+            effectIntensity.addEventListener('input', (e) => {
+                const value = e.target.value;
+                intensityValue.textContent = value;
+                swapSettings.intensity = parseInt(value);
+            });
+            
+            preserveExpressions.addEventListener('change', (e) => {
+                swapSettings.preserveExpressions = e.target.checked;
+            });
+            
+            preserveSkinTone.addEventListener('change', (e) => {
+                swapSettings.preserveSkinTone = e.target.checked;
+            });
+            
+            // Control panel toggle
+            toggleButton.addEventListener('click', () => {
+                controlPanel.classList.toggle('collapsed');
+                toggleButton.textContent = controlPanel.classList.contains('collapsed') ? '↑' : '↓';
+            });
+            
+            panelHeader.addEventListener('click', (e) => {
+                if (e.target !== toggleButton) {
+                    controlPanel.classList.toggle('collapsed');
+                    toggleButton.textContent = controlPanel.classList.contains('collapsed') ? '↑' : '↓';
+                }
+            });
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.getAttribute('data-tab');
+                    
+                    // Update active tab style
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show active tab panel
+                    document.querySelectorAll('.tab-panel').forEach(panel => {
+                        panel.style.display = 'none';
+                    });
+                    document.getElementById(`${tabName}Tab`).style.display = 'block';
+                });
+            });
+            
+            // Retry button
+            retryButton.addEventListener('click', () => {
+                errorScreen.style.display = 'none';
+                loadingScreen.style.display = 'flex';
+                loadingScreen.style.opacity = '1';
+                initializeApp();
+            });
+            
+            // Clean up on page unload
+            window.addEventListener('beforeunload', () => {
+                if (detectionInterval) {
+                    clearInterval(detectionInterval);
+                }
+                
+                if (webcamVideo.srcObject) {
+                    webcamVideo.srcObject.getTracks().forEach(track => track.stop());
+                }
+            });
+            
+            // Start the application
+            initializeApp();
+        });
+    </script>
+</body>
+</html> 
