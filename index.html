@@ -468,35 +468,30 @@
             
             // Initialize the application
             async function initializeApp() {
-                // Load face-api.js models
                 const modelsLoaded = await loadFaceApiModels();
                 if (!modelsLoaded) return;
                 
-                // Request camera access
+                await initializeVideo();
+                startFaceDetection();
+                requestAnimationFrame(updateCanvas);
+            }
+            
+            // Initialize video with optimized settings
+            async function initializeVideo() {
                 try {
-                    loadingStatus.textContent = "Requesting camera access...";
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 640 },  // Reduced resolution
+                            height: { ideal: 480 }
+                        }
+                    });
                     webcamVideo.srcObject = stream;
                     
                     webcamVideo.onloadedmetadata = () => {
-                        // Set canvas dimensions to match video
+                        // Set canvas to match video resolution
                         arCanvas.width = webcamVideo.videoWidth;
                         arCanvas.height = webcamVideo.videoHeight;
-                        
-                        // Hide loading screen
-                        progressFill.style.width = '100%';
-                        loadingStatus.textContent = "Starting application...";
-                        
-                        setTimeout(() => {
-                            loadingScreen.style.opacity = '0';
-                            setTimeout(() => {
-                                loadingScreen.style.display = 'none';
-                            }, 500);
-                        }, 500);
-                        
-                        // Start detection and animation
-                        startFaceDetection();
-                        requestAnimationFrame(updateCanvas);
                     };
                 } catch (error) {
                     console.error('Error accessing camera:', error);
@@ -507,24 +502,23 @@
             
             // Start face detection using face-api.js
             function startFaceDetection() {
-                // Set up detection options
+                // Set up detection options with optimized settings for mobile
                 const detectionOptions = new faceapi.TinyFaceDetectorOptions({
-                    inputSize: 512,
+                    inputSize: 256,  // Reduced from 512 for better performance
                     scoreThreshold: 0.5
                 });
                 
-                // Start detection loop
+                // Reduce detection frequency for mobile
                 detectionInterval = setInterval(async () => {
                     if (webcamVideo.paused || webcamVideo.ended) return;
                     
                     try {
-                        // Run detection
+                        // Run detection with minimal features for better performance
                         const detections = await faceapi.detectAllFaces(
                             webcamVideo, 
                             detectionOptions
                         )
-                        .withFaceLandmarks()
-                        .withFaceExpressions();
+                        .withFaceLandmarks();  // Removed expression detection for performance
                         
                         // Process detections
                         detectedFaces = detections.map((detection, index) => {
@@ -538,7 +532,7 @@
                                 id: existingFace?.id || `face-${Date.now()}-${index}`,
                                 detection: detection.detection,
                                 landmarks: detection.landmarks,
-                                expressions: detection.expressions
+                                expressions: { neutral: 1 }  // Simplified expressions
                             };
                         });
                         
@@ -553,7 +547,7 @@
                     } catch (error) {
                         console.error('Face detection error:', error);
                     }
-                }, 100); // Run detection every 100ms
+                }, 200);  // Reduced frequency from 100ms to 200ms for better performance
             }
             
             // Update faces list in UI
@@ -642,71 +636,43 @@
                 // Clear canvas
                 ctx.clearRect(0, 0, arCanvas.width, arCanvas.height);
                 
-                // Draw face outlines and landmarks
+                // Draw face outlines and landmarks with minimal visual effects
                 detectedFaces.forEach((face) => {
                     const box = face.detection.box;
                     
-                    // Draw face box
-                    ctx.strokeStyle = face.id === selectedFaceId ? '#e74c3c' : '#3498db';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(box.x, box.y, box.width, box.height);
-                    
-                    // Draw face mesh points
-                    if (face.landmarks) {
-                        const positions = face.landmarks.positions;
-                        positions.forEach(point => {
-                            ctx.fillStyle = '#2ecc71';
-                            ctx.beginPath();
-                            ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
-                            ctx.fill();
-                        });
-                    }
-                    
-                    // Draw face ID
-                    ctx.fillStyle = 'white';
-                    ctx.font = '12px Arial';
-                    ctx.fillText(`Face #${face.id.substring(face.id.lastIndexOf('-') + 1)}`, box.x, box.y - 5);
-                    
-                    // If this is the target face for swapping, add visual indicator
+                    // Draw minimal face box for performance
                     if (face.id === selectedFaceId) {
-                        ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
-                        ctx.fillRect(box.x, box.y, box.width, box.height);
+                        ctx.strokeStyle = '#e74c3c';
+                        ctx.strokeRect(box.x, box.y, box.width, box.height);
                         
-                        // If we're swapping with another face, draw connection
+                        // If we're swapping with another face, draw minimal connection
                         if (isSwapping) {
                             const otherFaces = detectedFaces.filter(f => f.id !== selectedFaceId);
                             if (otherFaces.length > 0) {
-                                // Find closest face to swap with
                                 const targetFace = otherFaces[0];
                                 const targetBox = targetFace.detection.box;
                                 
-                                // Draw connection between faces
+                                // Draw simple connection line
                                 ctx.strokeStyle = '#e74c3c';
-                                ctx.lineWidth = 2;
-                                ctx.setLineDash([5, 5]);
                                 ctx.beginPath();
                                 ctx.moveTo(box.x + box.width/2, box.y + box.height/2);
                                 ctx.lineTo(targetBox.x + targetBox.width/2, targetBox.y + targetBox.height/2);
                                 ctx.stroke();
-                                ctx.setLineDash([]);
                                 
-                                // Add swap indicator on the target face
-                                ctx.fillStyle = 'rgba(52, 152, 219, 0.3)';
-                                ctx.fillRect(targetBox.x, targetBox.y, targetBox.width, targetBox.height);
-                                
-                                // Simulate face swap by drawing a mixed-opacity version of the source face
-                                // This is a simplified visualization - real face swapping would use more complex techniques
-                                const intensity = swapSettings.intensity / 100;
-                                ctx.globalAlpha = intensity;
-                                ctx.drawImage(
-                                    webcamVideo,
-                                    box.x, box.y, box.width, box.height,
-                                    targetBox.x, targetBox.y, targetBox.width, targetBox.height
-                                );
-                                ctx.globalAlpha = 1.0;
+                                // Simple swap visualization
+                                ctx.strokeStyle = '#3498db';
+                                ctx.strokeRect(targetBox.x, targetBox.y, targetBox.width, targetBox.height);
                             }
                         }
+                    } else {
+                        ctx.strokeStyle = '#3498db';
+                        ctx.strokeRect(box.x, box.y, box.width, box.height);
                     }
+                    
+                    // Draw minimal face ID
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(`Face #${face.id.substring(face.id.lastIndexOf('-') + 1)}`, box.x, box.y - 5);
                 });
                 
                 requestAnimationFrame(updateCanvas);
