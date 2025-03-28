@@ -4,9 +4,8 @@
     <title>Face Swap AR</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1632432234/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/modules.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -33,14 +32,7 @@
             height: 480px;
             margin: 0 auto;
         }
-        #output_canvas {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-        }
-        #video {
+        #webcam {
             position: absolute;
             left: 0;
             top: 0;
@@ -118,8 +110,7 @@
 <body>
     <div id="status">Loading...</div>
     <div id="container">
-        <video id="video" playsinline></video>
-        <canvas id="output_canvas"></canvas>
+        <canvas id="webcam"></canvas>
     </div>
     
     <div class="controls">
@@ -143,111 +134,98 @@
     </div>
 
     <script>
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('output_canvas');
+        const BANUBA_CLIENT_TOKEN = "Qk5CILg4rQ/5pSbj+Eu+QvaGC5c7QhbR8OPr6A3W695OtWDJ+S/uGzQ/GCf3cJdPOAzA8OsVQMH2AITpHk8ZL8YWTz7zXc+ewweTZtIoaXS3SbTq4IPp4FpXOtYax713V2UM99tS7M0EL4dV+FjcXNe7iAZJn+robJqsQ7eAybPaYyCGfPHjVK/r22BRnIW2veoMExJCRjb749WLrgyD4Ff2sS/rAEF5D6mMqb9z45m6L9PxEjJtYMfFRdmYoWrlKbOYpUdkSFLMWA6n/nfOEAklTwRL6oXOfgfiq6M49tZ0u0fPyBZlu8h2Vaxn1rdXNFSHA6u2LjMOqK8NHhbfJEKHg6kwuaKO5OXPN9/I+sFpJIBIaGTlKDpqQ7PM32Gm9S4l2dSV+w/wKLUkG6eschZUcy5KyMIbN01dh5E74vExyjSI8UYwwJ1lm5xYk2xpRCn8bjuy4r1YcXNrAJ9BqD5Q+Hm/KCk/qZ72WGwoXqH//0rLsffdupRA7glsqWCcdUkfSwR8gAS4sDIFGJeQ2sCgDl9M8mmFK7wR97Zb40jWJmtd3wgEbvrY8uDOO/1z3Ja0bPnGV1ObZ/2nQ/wk13ELohMJlTmMvKOPnsj6Gh8bPjJ73s40kXlMknm1Sivw+1vOJw48gkAAhxpq8+pU+5s=";
+        
         const statusElement = document.getElementById('status');
-        const canvasCtx = canvasElement.getContext('2d');
-        const uploadedImage = document.getElementById('uploadedImage');
+        const canvasElement = document.getElementById('webcam');
+        let player = null;
         let isImageUploaded = false;
-        let faceMeshPoints = null;
 
         function updateStatus(message) {
             statusElement.textContent = message;
             console.log(message);
         }
 
-        function onResults(results) {
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        async function initBanuba() {
+            updateStatus('Initializing Banuba SDK...');
             
-            // Draw the camera feed first
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-            
-            if (results.multiFaceLandmarks) {
-                faceMeshPoints = results.multiFaceLandmarks[0];
-                
-                if (isImageUploaded && faceMeshPoints) {
-                    // Get face bounds
-                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                    for (const pt of faceMeshPoints) {
-                        const x = pt.x * canvasElement.width;
-                        const y = pt.y * canvasElement.height;
-                        minX = Math.min(minX, x);
-                        minY = Math.min(minY, y);
-                        maxX = Math.max(maxX, x);
-                        maxY = Math.max(maxY, y);
-                    }
-                    
-                    const faceWidth = maxX - minX;
-                    const faceHeight = maxY - minY;
-                    
-                    // Draw the uploaded image over the face
-                    canvasCtx.drawImage(
-                        uploadedImage,
-                        minX - faceWidth * 0.2,
-                        minY - faceHeight * 0.2,
-                        faceWidth * 1.4,
-                        faceHeight * 1.4
-                    );
-                } else {
-                    // Draw face mesh visualization
-                    for (const landmarks of results.multiFaceLandmarks) {
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, 
-                            { color: '#C0C0C070', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
-                            { color: '#FF3030', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, 
-                            { color: '#FF3030', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, 
-                            { color: '#30FF30', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, 
-                            { color: '#30FF30', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, 
-                            { color: '#E0E0E0', lineWidth: 1 });
-                        drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, 
-                            { color: '#E0E0E0', lineWidth: 1 });
-                    }
-                }
+            try {
+                // Initialize Banuba SDK
+                const moduleManager = await BanubaClientToken.initialize({
+                    clientToken: BANUBA_CLIENT_TOKEN
+                });
+
+                // Create and initialize the WebAR player
+                player = await WebAR.Player.create({
+                    clientToken: BANUBA_CLIENT_TOKEN,
+                    canvas: canvasElement,
+                    moduleManager
+                });
+
+                // Start camera
+                await player.setCameraDevice("user");
+                await player.play();
+
+                // Set up face tracking
+                const faceTracker = await moduleManager.createFaceTracker();
+                await faceTracker.setMode("face_tracker_mode_realtime");
+                player.addModule(faceTracker);
+
+                updateStatus('Ready! Upload an image or take a screenshot.');
+
+                // Setup event listeners
+                setupEventListeners();
+
+            } catch (error) {
+                updateStatus('Error initializing: ' + error.message);
+                console.error(error);
             }
-            
-            canvasCtx.restore();
         }
 
-        async function setupCamera() {
-            updateStatus('Initializing camera...');
-            
-            const constraints = {
-                video: {
-                    width: 640,
-                    height: 480,
-                    facingMode: 'user'
-                }
-            };
+        function setupEventListeners() {
+            document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+            document.getElementById('fileInput').onchange = handleImageUpload;
+            document.getElementById('screenshotBtn').onclick = takeScreenshot;
+            document.getElementById('saveBtn').onclick = saveScreenshot;
+            document.getElementById('retakeBtn').onclick = closePreview;
+        }
+
+        async function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = stream;
-                return new Promise((resolve) => {
-                    videoElement.onloadedmetadata = () => {
-                        videoElement.play();
-                        canvasElement.width = videoElement.videoWidth;
-                        canvasElement.height = videoElement.videoHeight;
-                        resolve();
-                    };
+                updateStatus('Processing image...');
+                
+                // Create a face swap effect with the uploaded image
+                const imageUrl = URL.createObjectURL(file);
+                const effect = await player.createEffect({
+                    name: "face_swap",
+                    parameters: {
+                        image: imageUrl
+                    }
                 });
+
+                // Apply the effect
+                await player.applyEffect(effect);
+                isImageUploaded = true;
+                updateStatus('Face swap active! Make sure your face is visible.');
+
             } catch (error) {
-                updateStatus('Error accessing camera: ' + error.message);
-                throw error;
+                updateStatus('Error processing image: ' + error.message);
+                console.error(error);
             }
         }
 
-        // Screenshot functionality
         function takeScreenshot() {
+            if (!player) return;
+            
             const preview = document.getElementById('screenshotPreview');
             const previewImg = document.getElementById('previewImage');
             
-            // Capture the canvas content
-            previewImg.src = canvasElement.toDataURL('image/png');
+            // Capture the current frame
+            const dataUrl = canvasElement.toDataURL('image/png');
+            previewImg.src = dataUrl;
             preview.style.display = 'block';
         }
 
@@ -259,16 +237,16 @@
                 fetch(previewImg.src)
                     .then(res => res.blob())
                     .then(blob => {
-                        const file = new File([blob], 'face-swap-screenshot.png', { type: 'image/png' });
+                        const file = new File([blob], 'face-swap.png', { type: 'image/png' });
                         navigator.share({
                             files: [file],
-                            title: 'Face Swap Screenshot'
+                            title: 'Face Swap'
                         }).catch(console.error);
                     });
             } else {
                 // Fallback for desktop: download the image
                 const link = document.createElement('a');
-                link.download = 'face-swap-screenshot.png';
+                link.download = 'face-swap.png';
                 link.href = previewImg.src;
                 link.click();
             }
@@ -280,69 +258,8 @@
             document.getElementById('screenshotPreview').style.display = 'none';
         }
 
-        // Image upload handling
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    uploadedImage.src = e.target.result;
-                    uploadedImage.onload = function() {
-                        isImageUploaded = true;
-                        updateStatus('Image uploaded - detecting face...');
-                    };
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        async function initFaceMesh() {
-            updateStatus('Initializing FaceMesh...');
-            
-            const faceMesh = new FaceMesh({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
-                }
-            });
-
-            faceMesh.setOptions({
-                maxNumFaces: 1,
-                refineLandmarks: true,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
-
-            faceMesh.onResults(onResults);
-
-            try {
-                await setupCamera();
-                updateStatus('Starting camera feed...');
-                
-                const camera = new Camera(videoElement, {
-                    onFrame: async () => {
-                        await faceMesh.send({image: videoElement});
-                    },
-                    width: 640,
-                    height: 480
-                });
-                
-                camera.start();
-                updateStatus('Ready! Upload an image or take a screenshot.');
-                
-                // Setup event listeners
-                document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
-                document.getElementById('fileInput').onchange = handleImageUpload;
-                document.getElementById('screenshotBtn').onclick = takeScreenshot;
-                document.getElementById('saveBtn').onclick = saveScreenshot;
-                document.getElementById('retakeBtn').onclick = closePreview;
-                
-            } catch (error) {
-                updateStatus('Error during initialization: ' + error.message);
-            }
-        }
-
         // Start the application
-        window.onload = initFaceMesh;
+        window.onload = initBanuba;
     </script>
 </body>
 </html>
