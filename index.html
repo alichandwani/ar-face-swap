@@ -103,16 +103,21 @@
                 }
 
                 // Initialize SDK
-                const { Player, Effect } = window.BanubaSDK;
+                const { WebARPlayer } = window.BanubaSDK;
                 
                 // Create player
-                webarPlayer = await Player.create({
+                webarPlayer = await WebARPlayer.create({
                     clientToken: window.BANUBA_CLIENT_TOKEN,
-                    container: document.getElementById('webar')
+                    devicePixelRatio: window.devicePixelRatio || 1
                 });
 
-                // Start camera
-                await webarPlayer.startCamera();
+                // Set container
+                webarPlayer.use('player.container', {
+                    element: document.getElementById('webar')
+                });
+
+                // Start video stream
+                await webarPlayer.use('player.videoStream');
                 updateStatus('Ready! Upload an image for face swap.');
 
                 // Setup event listeners
@@ -136,11 +141,10 @@
 
                 // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                const effect = await Effect.create('face_swap', {
+                await webarPlayer.use('face_swap', {
                     image: imageUrl
                 });
 
-                await webarPlayer.applyEffect(effect);
                 updateStatus('Face swap active! Make sure your face is visible.');
 
             } catch (error) {
@@ -153,9 +157,15 @@
             if (!webarPlayer) return;
             
             try {
-                const dataUrl = await webarPlayer.takeScreenshot();
+                const canvas = document.createElement('canvas');
+                const video = document.querySelector('#webar video');
+                if (!video) throw new Error('Video element not found');
                 
-                // Create download link
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                const dataUrl = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
                 link.download = 'face-swap.png';
                 link.href = dataUrl;
