@@ -44,6 +44,45 @@
             z-index: 1000;
         }
         
+        .filter-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 1000;
+        }
+        
+        .filter-btn {
+            width: 60px;
+            height: 60px;
+            border: 2px solid white;
+            border-radius: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            padding: 0;
+            background: none;
+            transition: transform 0.2s;
+        }
+        
+        .filter-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .filter-btn.active {
+            border-color: #4CAF50;
+        }
+        
+        .filter-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
         #screenshot-btn {
             position: fixed;
             bottom: 20px;
@@ -69,7 +108,7 @@
         
         #upload-btn {
             position: fixed;
-            bottom: 70px;
+            bottom: 60px;
             left: 50%;
             transform: translateX(-50%);
             padding: 10px 20px;
@@ -91,14 +130,32 @@
     <video id="webcam" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
     <div class="status">Loading...</div>
+    
+    <div class="filter-container">
+        <button class="filter-btn active" data-filter="none">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJ3aGl0ZSIgZD0iTTEyIDJDNi40NyAyIDIgNi40NyAyIDEyczQuNDcgMTAgMTAgMTAgMTAtNC40NyAxMC0xMFMxNy41MyAyIDEyIDJ6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4eiIvPjwvc3ZnPg==" alt="No Filter">
+        </button>
+        <button class="filter-btn" data-filter="dog">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3e7c3t3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==" alt="Dog Filter">
+        </button>
+        <button class="filter-btn" data-filter="human">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3t3d3s3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==" alt="Human Filter">
+        </button>
+    </div>
+    
     <button id="screenshot-btn">Take Screenshot</button>
     <input type="file" id="file-input" accept="image/png,image/jpeg">
-    <button id="upload-btn">Upload Face Image</button>
+    <button id="upload-btn">Upload Custom Filter</button>
     
     <script>
         let faceMesh;
         let camera;
         let filterImage = null;
+        let currentFilter = 'none';
+        const filters = {
+            dog: null,
+            human: null
+        };
         
         function updateStatus(message) {
             const statusEl = document.querySelector('.status');
@@ -106,6 +163,65 @@
                 statusEl.textContent = message;
             }
         }
+        
+        function loadPresetFilters() {
+            // Load dog filter
+            const dogImg = new Image();
+            dogImg.onload = () => {
+                filters.dog = dogImg;
+                updateStatus('Dog filter loaded');
+            };
+            dogImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3e7c3t3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==';
+            
+            // Load human filter
+            const humanImg = new Image();
+            humanImg.onload = () => {
+                filters.human = humanImg;
+                updateStatus('Human filter loaded');
+            };
+            humanImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3t3d3s3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==" alt="Human Filter">
+        </button>
+    </div>
+    
+    <button id="screenshot-btn">Take Screenshot</button>
+    <input type="file" id="file-input" accept="image/png,image/jpeg">
+    <button id="upload-btn">Upload Custom Filter</button>
+    
+    <script>
+        let faceMesh;
+        let camera;
+        let filterImage = null;
+        let currentFilter = 'none';
+        const filters = {
+            dog: null,
+            human: null
+        };
+        
+        function updateStatus(message) {
+            const statusEl = document.querySelector('.status');
+            if (statusEl) {
+                statusEl.textContent = message;
+            }
+        }
+        
+        function loadPresetFilters() {
+            // Load dog filter
+            const dogImg = new Image();
+            dogImg.onload = () => {
+                filters.dog = dogImg;
+                updateStatus('Dog filter loaded');
+            };
+            dogImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3e7c3t3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==" alt="Dog Filter">
+        </button>
+        
+        // Load human filter
+        const humanImg = new Image();
+        humanImg.onload = () => {
+            filters.human = humanImg;
+            updateStatus('Human filter loaded');
+        };
+        humanImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAB2AAAAdgB+lymcgAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAANJSURBVHic7Zs9aBRBFMd/e3f35RI1UcPFgCIWFhYiNhYiWFgIFoKFhYVgYWFhYWFhYSGIhYWFhYWFhYVgYWEhiNgIIhYiYiGIWIghH0Zj7i57+1HM3e3e3u3t3d3s3TnvD4/AvpvZ+f+YeTOzs6CpqampWYyQvQBwFNgJdIEV4BPwDvgOfAU+A7+XoL9kNgAXgNvAa2AEzBL+jYA3wC3gPNBagtaF2QVcBT4AE+IDnwQ/vwKuADt96k+NJnAGeAyMSRb4fMbAI+A00PCkPzGbgRvAD9IHvpAf6LW2+ZGfjFPAe7ILfD7v0WszE+wA7pFf4PO5i17DqbEDeEhxgc/nIXotp8Jm4BbFBz6fW0DTg/5YbKO84P0Ef9uXiVhsAh5QfvDzeYBHE7EJuE41gvdzDU8mYgNwh2oF7+cOHkzEeuAu1Q3ezz08mIh1VDt4P/dY0ESspdqr/WLcZUETsYbZe/iqBg/6XsOZiSiTv+Czyj/AJeA4sA3YCmwHeoXoiTIRZfAXfJb5DJwFlkeUX0bPRGQd/DDQ+3MBZ4FfEeX9mIisgh8BN4HtjvpLYSKyCH4M3AX2JtBdGhORdvBj4D6wL6HWUpmINIMfA4+BAwk1lspEpBX8BHgKHEqhL28TsQP4mLCNSfAcOJxSW+4mIo3gJ8BL4GhKTYWYiKTBT4A3wPGUWgo1EUmC/w28BE6k1FC4iYgb/AR4BZxMWXvhJiJO8H+Al8CplDUXbiKWEi34v8Bz4HTKWks3EYsF/w94BpxJWWMpJiIs+H/AU+BsytpKNRFB8P+BJ8C5lDWVaiL84CfoHf25lLWUzkQA/EHv6C+krKF0JqKFDvIh5Qc/QR9AXaQ6JqKJDvIR5Qc/Rh9AXaJaJqKBDvIp5Qc/Qh9AXaZ6JqKODvIZ5Qc/RB9AXaGaJqKGDvIF5Qf/G30AdZXqmogaOsi3lB/8N/QB1DWqbSJq6CDfU37wX9AHUL3qxjcRNXSQHyk/+M/oA6jeVGObCIUO8jPlB/8JfQDVq2ZsE6HQQfYpP/g++gCqd71YJkKhgxxQfvAD9AHUTPRimQiFDnJI+cEP0QdQM9NLZCIUOsgR5Qc/Qh9AzVQvkYlQ6CDHlB/8GH0ANXO9RCaipqampqYmkv8YWYrJv0YWrgAAAABJRU5ErkJggg==" alt="Human Filter">
+        </button>
         
         function takeScreenshot() {
             const canvas = document.getElementById('canvas');
@@ -123,12 +239,37 @@
                     const img = new Image();
                     img.onload = function() {
                         filterImage = img;
-                        updateStatus('Filter image loaded');
+                        currentFilter = 'custom';
+                        updateStatus('Custom filter loaded');
+                        updateActiveFilter('custom');
                     };
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             }
+        }
+        
+        function updateActiveFilter(filter) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        function handleFilterClick(event) {
+            const filter = event.currentTarget.dataset.filter;
+            currentFilter = filter;
+            
+            if (filter === 'none') {
+                filterImage = null;
+            } else {
+                filterImage = filters[filter] || filterImage;
+            }
+            
+            updateActiveFilter(filter);
+            updateStatus(`${filter.charAt(0).toUpperCase() + filter.slice(1)} filter applied`);
         }
         
         async function setupCamera() {
@@ -241,6 +382,9 @@
         
         async function initFaceMesh() {
             try {
+                // Load preset filters
+                loadPresetFilters();
+                
                 faceMesh = new FaceMesh({
                     locateFile: (file) => {
                         return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
@@ -266,7 +410,7 @@
                 });
                 
                 await camera.start();
-                updateStatus('Ready - Upload an image');
+                updateStatus('Ready - Select a filter');
                 
                 // Setup buttons
                 document.getElementById('screenshot-btn').addEventListener('click', takeScreenshot);
@@ -274,6 +418,11 @@
                     document.getElementById('file-input').click();
                 });
                 document.getElementById('file-input').addEventListener('change', handleFileUpload);
+                
+                // Setup filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', handleFilterClick);
+                });
                 
             } catch (error) {
                 updateStatus('Error: Please refresh and try again');
