@@ -6,8 +6,13 @@
     <title>Face Swap AR</title>
     <script src="BanubaClientToken.js"></script>
     <script>
+        // Global variable to track SDK loading
+        window.isBanubaLoaded = false;
+        
         window.onBanubaSDKLoaded = function() {
-            initializeBanuba();
+            console.log('SDK script loaded');
+            window.isBanubaLoaded = true;
+            checkAndInitialize();
         };
     </script>
     <script async src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
@@ -80,10 +85,10 @@
     <div id="webar"></div>
     
     <div class="controls">
-        <button id="uploadBtn" class="btn">
+        <button id="uploadBtn" class="btn" disabled>
             <span>Upload Image</span>
         </button>
-        <button id="screenshotBtn" class="btn">
+        <button id="screenshotBtn" class="btn" disabled>
             <span>Take Screenshot</span>
         </button>
     </div>
@@ -92,6 +97,8 @@
 
     <script>
         const statusElement = document.getElementById('status');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const screenshotBtn = document.getElementById('screenshotBtn');
         let webarPlayer = null;
 
         function updateStatus(message) {
@@ -99,28 +106,54 @@
             console.log(message);
         }
 
+        async function checkCameraPermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                return true;
+            } catch (err) {
+                console.error('Camera permission error:', err);
+                return false;
+            }
+        }
+
         async function initializeBanuba() {
             try {
-                updateStatus('Loading Banuba SDK...');
+                updateStatus('Checking camera permission...');
+                const hasPermission = await checkCameraPermission();
+                if (!hasPermission) {
+                    throw new Error('Camera permission denied. Please allow camera access and refresh the page.');
+                }
+
+                updateStatus('Initializing Banuba SDK...');
+                if (!window.BanubaSDK) {
+                    throw new Error('SDK not loaded. Please refresh the page.');
+                }
 
                 // Initialize SDK
-                const { Player, Effect } = window.BanubaSDK;
+                const { Player } = window.BanubaSDK;
                 
                 // Create player instance
                 webarPlayer = await Player.create({
-                    clientToken: window.BANUBA_CLIENT_TOKEN,
-                    devicePixelRatio: window.devicePixelRatio || 1
+                    clientToken: window.BANUBA_CLIENT_TOKEN
                 });
 
                 // Set container
-                webarPlayer.use('player.container', {
+                await webarPlayer.use('player.container', {
                     element: document.getElementById('webar')
                 });
 
                 // Start video stream
                 await webarPlayer.use('player.videoStream', {
-                    deviceId: 'auto'
+                    deviceId: 'auto',
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
                 });
+
+                // Enable buttons
+                uploadBtn.disabled = false;
+                screenshotBtn.disabled = false;
 
                 updateStatus('Ready! Upload an image for face swap.');
 
@@ -130,8 +163,8 @@
                 document.getElementById('screenshotBtn').onclick = takeScreenshot;
 
             } catch (error) {
-                updateStatus('Error initializing SDK: ' + error.message);
-                console.error('Banuba SDK initialization error:', error);
+                updateStatus('Error: ' + error.message);
+                console.error('Initialization error:', error);
             }
         }
 
@@ -179,6 +212,17 @@
                 console.error('Screenshot error:', error);
             }
         }
+
+        function checkAndInitialize() {
+            if (window.isBanubaLoaded) {
+                initializeBanuba();
+            } else {
+                updateStatus('Waiting for SDK to load...');
+            }
+        }
+
+        // Start initialization process
+        checkAndInitialize();
 
         // Cleanup on page unload
         window.onbeforeunload = () => {
