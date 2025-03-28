@@ -149,20 +149,30 @@
             // Load 3D model
             const loader = new THREE.GLTFLoader();
             loader.load(
-                'https://raw.githubusercontent.com/tensorflow/tfjs-models/master/facemesh/demo/face.glb',
+                'https://models.readyplayer.me/64c8c1d5c7fd7c0ebf11c116.glb',
                 (gltf) => {
                     faceModel = gltf.scene;
-                    faceModel.scale.set(2, 2, 2);
+                    // Adjust scale for this specific model
+                    faceModel.scale.set(0.5, 0.5, 0.5);
+                    // Center the model
+                    faceModel.position.set(0, 0, 0);
                     scene.add(faceModel);
                     isModelLoaded = true;
                     updateStatus('3D Model loaded');
                 },
                 (progress) => {
-                    console.log('Loading model:', (progress.loaded / progress.total * 100) + '%');
+                    const percent = (progress.loaded / progress.total * 100).toFixed(2);
+                    updateStatus(`Loading 3D model: ${percent}%`);
                 },
                 (error) => {
                     console.error('Error loading model:', error);
-                    updateStatus('Error loading 3D model');
+                    updateStatus('Error loading 3D model. Retrying...');
+                    // Fallback to a basic geometry if model fails
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+                    faceModel = new THREE.Mesh(geometry, material);
+                    scene.add(faceModel);
+                    isModelLoaded = true;
                 }
             );
         }
