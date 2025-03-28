@@ -6,6 +6,12 @@
     <title>Face Swap AR</title>
     <script src="BanubaClientToken.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
+    <script>
+        // Initialize Banuba SDK when it's loaded
+        window.onBanubaSDKLoaded = () => {
+            console.log('Banuba SDK loaded');
+        };
+    </script>
     <style>
         body {
             margin: 0;
@@ -98,26 +104,19 @@
                 updateStatus('Loading Banuba SDK...');
 
                 // Wait for SDK to be loaded
-                if (typeof window.BanubaSDK === 'undefined') {
+                if (!window.Banuba) {
                     throw new Error('Banuba SDK not loaded. Please check your internet connection.');
                 }
 
                 // Initialize SDK
-                const { WebARPlayer } = window.BanubaSDK;
-                
-                // Create player
-                webarPlayer = await WebARPlayer.create({
+                webarPlayer = await window.Banuba.initialize({
                     clientToken: window.BANUBA_CLIENT_TOKEN,
-                    devicePixelRatio: window.devicePixelRatio || 1
+                    devicePixelRatio: window.devicePixelRatio || 1,
+                    container: document.getElementById('webar')
                 });
 
-                // Set container
-                webarPlayer.use('player.container', {
-                    element: document.getElementById('webar')
-                });
-
-                // Start video stream
-                await webarPlayer.use('player.videoStream');
+                // Start camera
+                await webarPlayer.startCamera();
                 updateStatus('Ready! Upload an image for face swap.');
 
                 // Setup event listeners
@@ -141,7 +140,7 @@
 
                 // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                await webarPlayer.use('face_swap', {
+                await webarPlayer.applyEffect('face_swap', {
                     image: imageUrl
                 });
 
@@ -157,15 +156,7 @@
             if (!webarPlayer) return;
             
             try {
-                const canvas = document.createElement('canvas');
-                const video = document.querySelector('#webar video');
-                if (!video) throw new Error('Video element not found');
-                
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                
-                const dataUrl = canvas.toDataURL('image/png');
+                const dataUrl = await webarPlayer.takeScreenshot();
                 const link = document.createElement('a');
                 link.download = 'face-swap.png';
                 link.href = dataUrl;
@@ -177,10 +168,11 @@
         }
 
         // Wait for SDK to load
-        window.addEventListener('load', () => {
-            // Small delay to ensure SDK is fully loaded
-            setTimeout(initializeBanuba, 1000);
-        });
+        if (window.Banuba) {
+            initializeBanuba();
+        } else {
+            window.onBanubaSDKLoaded = initializeBanuba;
+        }
 
         // Cleanup on page unload
         window.onbeforeunload = () => {
