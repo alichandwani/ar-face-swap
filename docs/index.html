@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Swap AR</title>
+    <!-- Load SDK first -->
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
+    <!-- Load token after SDK -->
+    <script src="BanubaClientToken.js"></script>
     <style>
         body {
             margin: 0;
@@ -89,16 +93,11 @@
 
     <input type="file" id="fileInput" accept="image/*">
 
-    <!-- Load token first -->
-    <script src="BanubaClientToken.js"></script>
-    <!-- Load SDK after token -->
-    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
-
     <script>
+        let webarPlayer = null;
         const statusElement = document.getElementById('status');
         const uploadBtn = document.getElementById('uploadBtn');
         const screenshotBtn = document.getElementById('screenshotBtn');
-        let webarPlayer = null;
 
         function updateStatus(message) {
             statusElement.textContent = message;
@@ -113,23 +112,35 @@
         async function initializeBanuba() {
             try {
                 updateStatus('Initializing SDK...');
-                
-                if (!window.BanubaSDK) {
-                    throw new Error('Banuba SDK not loaded. Please check your internet connection.');
+
+                // Wait for SDK to be available
+                if (typeof window.BanubaSDK === 'undefined') {
+                    throw new Error('Banuba SDK not loaded');
                 }
 
-                if (!window.BANUBA_CLIENT_TOKEN) {
-                    throw new Error('Banuba client token not found.');
+                // Wait for token to be available
+                if (typeof window.BANUBA_CLIENT_TOKEN === 'undefined') {
+                    throw new Error('Banuba client token not found');
                 }
 
+                // Get required components
                 const { Player } = window.BanubaSDK;
 
-                // Create player with minimal options first
+                // Create player instance
                 webarPlayer = await Player.create({
-                    clientToken: window.BANUBA_CLIENT_TOKEN
+                    clientToken: window.BANUBA_CLIENT_TOKEN,
+                    devicePixelRatio: window.devicePixelRatio || 1
                 });
 
-                // Request camera access before container setup
+                // Set up container
+                const container = document.getElementById('webar');
+                await webarPlayer.use('player.container', { 
+                    element: container,
+                    width: 640,
+                    height: 480
+                });
+
+                // Request camera permissions
                 updateStatus('Requesting camera access...');
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
@@ -139,12 +150,12 @@
                     }
                 });
 
-                // Set up container
-                const container = document.getElementById('webar');
-                await webarPlayer.use('player.container', { element: container });
-
-                // Set up video stream
-                await webarPlayer.use('player.videoStream', { stream });
+                // Initialize video stream
+                await webarPlayer.use('player.videoStream', {
+                    stream,
+                    width: 640,
+                    height: 480
+                });
 
                 // Enable controls
                 enableButtons();
@@ -156,8 +167,7 @@
                 screenshotBtn.onclick = takeScreenshot;
 
             } catch (error) {
-                const errorMessage = error.message || 'Unknown error occurred';
-                updateStatus('Error: ' + errorMessage);
+                updateStatus('Error: ' + (error.message || 'Unknown error'));
                 console.error('Initialization error:', error);
             }
         }
@@ -205,12 +215,11 @@
             }
         }
 
-        // Start initialization when SDK is loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeBanuba);
-        } else {
-            initializeBanuba();
-        }
+        // Wait for both SDK and DOM to be ready
+        window.addEventListener('load', () => {
+            // Give a small delay to ensure SDK is fully initialized
+            setTimeout(initializeBanuba, 1000);
+        });
 
         // Cleanup on page unload
         window.onbeforeunload = () => {
