@@ -55,14 +55,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            opacity: 0.5;
+            pointer-events: none;
         }
-        .btn:hover {
+        .btn.enabled {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .btn.enabled:hover {
             background: #45a049;
         }
         #uploadBtn {
             background: #2196F3;
         }
-        #uploadBtn:hover {
+        #uploadBtn.enabled:hover {
             background: #1976D2;
         }
         #fileInput {
@@ -80,10 +86,10 @@
     <div id="webar"></div>
     
     <div class="controls">
-        <button id="uploadBtn" class="btn" disabled>
+        <button id="uploadBtn" class="btn">
             <span>Upload Image</span>
         </button>
-        <button id="screenshotBtn" class="btn" disabled>
+        <button id="screenshotBtn" class="btn">
             <span>Take Screenshot</span>
         </button>
     </div>
@@ -101,88 +107,51 @@
             console.log(message);
         }
 
-        async function checkCameraPermission() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop());
-                return true;
-            } catch (err) {
-                console.error('Camera permission error:', err);
-                return false;
-            }
+        function enableButtons() {
+            uploadBtn.classList.add('enabled');
+            screenshotBtn.classList.add('enabled');
         }
 
         async function initializeBanuba() {
             try {
-                updateStatus('Checking camera permission...');
-                const hasPermission = await checkCameraPermission();
-                if (!hasPermission) {
-                    throw new Error('Camera permission denied. Please allow camera access and refresh the page.');
-                }
-
-                updateStatus('Initializing Banuba SDK...');
-                
-                // Wait for SDK to be available
-                let attempts = 0;
-                while (!window.BanubaSDK && attempts < 20) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    attempts++;
-                }
-
-                if (!window.BanubaSDK) {
-                    throw new Error('SDK failed to load. Please check your internet connection and refresh the page.');
-                }
+                updateStatus('Initializing...');
 
                 // Initialize SDK
-                const { Player } = window.BanubaSDK;
-                console.log('SDK loaded, creating player...');
-                
-                try {
-                    // Create player instance with all necessary options
-                    webarPlayer = await Player.create({
-                        clientToken: window.BANUBA_CLIENT_TOKEN
-                    });
-
-                    console.log('Player created, setting up container...');
-
-                    // Set up container
-                    await webarPlayer.use('player.container', {
-                        element: document.getElementById('webar')
-                    });
-
-                    console.log('Container set, starting video stream...');
-
-                    // Get user media stream
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: { ideal: 640 },
-                            height: { ideal: 480 },
-                            facingMode: 'user'
-                        }
-                    });
-
-                    // Start video stream
-                    await webarPlayer.use('player.videoStream', {
-                        stream: stream
-                    });
-
-                    console.log('Video stream started');
-
-                    // Enable buttons
-                    uploadBtn.disabled = false;
-                    screenshotBtn.disabled = false;
-
-                    updateStatus('Ready! Upload an image for face swap.');
-
-                    // Setup event listeners
-                    document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
-                    document.getElementById('fileInput').onchange = handleImageUpload;
-                    document.getElementById('screenshotBtn').onclick = takeScreenshot;
-
-                } catch (error) {
-                    console.error('Player creation error:', error);
-                    throw error;
+                if (!window.BanubaSDK) {
+                    throw new Error('SDK not loaded. Please check your internet connection and refresh the page.');
                 }
+
+                const { Player } = window.BanubaSDK;
+                
+                // Create player instance
+                webarPlayer = await Player.create({
+                    clientToken: window.BANUBA_CLIENT_TOKEN
+                });
+
+                // Set up container
+                const container = document.getElementById('webar');
+                await webarPlayer.use('player.container', { element: container });
+
+                // Request camera access
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    }
+                });
+
+                // Set up video stream
+                await webarPlayer.use('player.videoStream', { stream });
+
+                // Enable controls
+                enableButtons();
+                updateStatus('Ready! Upload an image for face swap.');
+
+                // Setup event listeners
+                uploadBtn.onclick = () => document.getElementById('fileInput').click();
+                document.getElementById('fileInput').onchange = handleImageUpload;
+                screenshotBtn.onclick = takeScreenshot;
 
             } catch (error) {
                 updateStatus('Error: ' + error.message);
@@ -197,15 +166,13 @@
 
             try {
                 updateStatus('Processing image...');
-
-                // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
+                
                 await webarPlayer.use('face_swap', {
                     image: imageUrl
                 });
 
                 updateStatus('Face swap active! Make sure your face is visible.');
-
             } catch (error) {
                 updateStatus('Error processing image: ' + error.message);
                 console.error('Face swap error:', error);
@@ -235,11 +202,14 @@
             }
         }
 
-        // Start initialization when page loads
-        window.addEventListener('load', () => {
-            console.log('Page loaded, starting initialization...');
+        // Start initialization when SDK is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(initializeBanuba, 1000);
+            });
+        } else {
             setTimeout(initializeBanuba, 1000);
-        });
+        }
 
         // Cleanup on page unload
         window.onbeforeunload = () => {
