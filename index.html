@@ -138,29 +138,17 @@
                 console.log('SDK loaded, creating player...');
                 
                 try {
-                    // Create player instance
+                    // Create player instance with all necessary options
                     webarPlayer = await Player.create({
-                        clientToken: window.BANUBA_CLIENT_TOKEN
+                        clientToken: window.BANUBA_CLIENT_TOKEN,
+                        container: document.getElementById('webar'),
+                        devicePixelRatio: window.devicePixelRatio || 1
                     });
 
-                    console.log('Player created, setting up container...');
+                    console.log('Player created, starting video stream...');
 
-                    // Set container
-                    const container = document.getElementById('webar');
-                    await webarPlayer.use('player.container', { element: container });
-
-                    console.log('Container set, starting video stream...');
-
-                    // Start video stream with explicit constraints
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: { ideal: 640 },
-                            height: { ideal: 480 },
-                            facingMode: 'user'
-                        }
-                    });
-
-                    await webarPlayer.use('player.videoStream', { stream });
+                    // Start video stream using the player's built-in camera handling
+                    await webarPlayer.startCamera();
 
                     console.log('Video stream started');
 
@@ -196,7 +184,7 @@
 
                 // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                await webarPlayer.use('face_swap', {
+                await webarPlayer.applyEffect('face_swap', {
                     image: imageUrl
                 });
 
@@ -212,15 +200,7 @@
             if (!webarPlayer) return;
             
             try {
-                const canvas = document.createElement('canvas');
-                const video = document.querySelector('#webar video');
-                if (!video) throw new Error('Video element not found');
-                
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                
-                const dataUrl = canvas.toDataURL('image/png');
+                const dataUrl = await webarPlayer.takeScreenshot();
                 const link = document.createElement('a');
                 link.download = 'face-swap.png';
                 link.href = dataUrl;
