@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Basic Face Detection</title>
+    <title>Face Swap AR</title>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1632432234/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js"></script>
@@ -18,27 +19,99 @@
             background: #1a1a1a;
             color: white;
             font-family: Arial, sans-serif;
+            overflow: hidden;
         }
         #status {
             margin: 20px;
             font-size: 18px;
+            z-index: 100;
         }
         #container {
             position: relative;
-            width: 640px;
+            width: 100%;
+            max-width: 640px;
             height: 480px;
+            margin: 0 auto;
         }
         #output_canvas {
             position: absolute;
             left: 0;
             top: 0;
+            width: 100%;
+            height: 100%;
         }
         #video {
             position: absolute;
             left: 0;
             top: 0;
-            width: 640px;
-            height: 480px;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 1000;
+            padding: 10px;
+        }
+        .btn {
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        #uploadBtn {
+            background: #2196F3;
+        }
+        #uploadBtn:hover {
+            background: #1976D2;
+        }
+        #fileInput {
+            display: none;
+        }
+        #screenshotPreview {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+        }
+        #previewImage {
+            max-width: 90%;
+            max-height: 80vh;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .preview-controls {
+            position: fixed;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        #uploadedImage {
+            display: none;
         }
     </style>
 </head>
@@ -48,12 +121,35 @@
         <video id="video" playsinline></video>
         <canvas id="output_canvas"></canvas>
     </div>
+    
+    <div class="controls">
+        <button id="uploadBtn" class="btn">
+            <span>Upload Image</span>
+        </button>
+        <button id="screenshotBtn" class="btn">
+            <span>Take Screenshot</span>
+        </button>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*">
+    <img id="uploadedImage" crossorigin="anonymous">
+    
+    <div id="screenshotPreview">
+        <img id="previewImage">
+        <div class="preview-controls">
+            <button class="btn" id="saveBtn">Save</button>
+            <button class="btn" id="retakeBtn" style="background: #f44336;">Retake</button>
+        </div>
+    </div>
 
     <script>
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('output_canvas');
         const statusElement = document.getElementById('status');
         const canvasCtx = canvasElement.getContext('2d');
+        const uploadedImage = document.getElementById('uploadedImage');
+        let isImageUploaded = false;
+        let faceMeshPoints = null;
 
         function updateStatus(message) {
             statusElement.textContent = message;
@@ -63,26 +159,57 @@
         function onResults(results) {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Draw the camera feed first
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
             if (results.multiFaceLandmarks) {
-                for (const landmarks of results.multiFaceLandmarks) {
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, 
-                        { color: '#C0C0C070', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
-                        { color: '#FF3030', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, 
-                        { color: '#FF3030', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, 
-                        { color: '#30FF30', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, 
-                        { color: '#30FF30', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, 
-                        { color: '#E0E0E0', lineWidth: 1 });
-                    drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, 
-                        { color: '#E0E0E0', lineWidth: 1 });
+                faceMeshPoints = results.multiFaceLandmarks[0];
+                
+                if (isImageUploaded && faceMeshPoints) {
+                    // Get face bounds
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    for (const pt of faceMeshPoints) {
+                        const x = pt.x * canvasElement.width;
+                        const y = pt.y * canvasElement.height;
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
+                    
+                    const faceWidth = maxX - minX;
+                    const faceHeight = maxY - minY;
+                    
+                    // Draw the uploaded image over the face
+                    canvasCtx.drawImage(
+                        uploadedImage,
+                        minX - faceWidth * 0.2,
+                        minY - faceHeight * 0.2,
+                        faceWidth * 1.4,
+                        faceHeight * 1.4
+                    );
+                } else {
+                    // Draw face mesh visualization
+                    for (const landmarks of results.multiFaceLandmarks) {
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, 
+                            { color: '#C0C0C070', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, 
+                            { color: '#FF3030', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, 
+                            { color: '#FF3030', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, 
+                            { color: '#30FF30', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, 
+                            { color: '#30FF30', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, 
+                            { color: '#E0E0E0', lineWidth: 1 });
+                        drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, 
+                            { color: '#E0E0E0', lineWidth: 1 });
+                    }
                 }
             }
+            
             canvasCtx.restore();
         }
 
@@ -111,6 +238,61 @@
             } catch (error) {
                 updateStatus('Error accessing camera: ' + error.message);
                 throw error;
+            }
+        }
+
+        // Screenshot functionality
+        function takeScreenshot() {
+            const preview = document.getElementById('screenshotPreview');
+            const previewImg = document.getElementById('previewImage');
+            
+            // Capture the canvas content
+            previewImg.src = canvasElement.toDataURL('image/png');
+            preview.style.display = 'block';
+        }
+
+        function saveScreenshot() {
+            const previewImg = document.getElementById('previewImage');
+            
+            // Try to use the Web Share API for mobile devices
+            if (navigator.share) {
+                fetch(previewImg.src)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const file = new File([blob], 'face-swap-screenshot.png', { type: 'image/png' });
+                        navigator.share({
+                            files: [file],
+                            title: 'Face Swap Screenshot'
+                        }).catch(console.error);
+                    });
+            } else {
+                // Fallback for desktop: download the image
+                const link = document.createElement('a');
+                link.download = 'face-swap-screenshot.png';
+                link.href = previewImg.src;
+                link.click();
+            }
+            
+            closePreview();
+        }
+
+        function closePreview() {
+            document.getElementById('screenshotPreview').style.display = 'none';
+        }
+
+        // Image upload handling
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImage.src = e.target.result;
+                    uploadedImage.onload = function() {
+                        isImageUploaded = true;
+                        updateStatus('Image uploaded - detecting face...');
+                    };
+                };
+                reader.readAsDataURL(file);
             }
         }
 
@@ -145,7 +327,15 @@
                 });
                 
                 camera.start();
-                updateStatus('Face detection active');
+                updateStatus('Ready! Upload an image or take a screenshot.');
+                
+                // Setup event listeners
+                document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+                document.getElementById('fileInput').onchange = handleImageUpload;
+                document.getElementById('screenshotBtn').onclick = takeScreenshot;
+                document.getElementById('saveBtn').onclick = saveScreenshot;
+                document.getElementById('retakeBtn').onclick = closePreview;
+                
             } catch (error) {
                 updateStatus('Error during initialization: ' + error.message);
             }
