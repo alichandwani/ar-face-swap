@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Swap AR</title>
+    <!-- Add mobile console -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
     <!-- Load SDK first -->
     <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
     <!-- Load token after SDK -->
@@ -134,41 +137,48 @@
                 const { Player } = window.BanubaSDK;
                 console.log('SDK loaded, creating player...');
                 
-                // Create player instance
-                webarPlayer = await Player.create({
-                    clientToken: window.BANUBA_CLIENT_TOKEN,
-                    devicePixelRatio: window.devicePixelRatio || 1
-                });
+                try {
+                    // Create player instance
+                    webarPlayer = await Player.create({
+                        clientToken: window.BANUBA_CLIENT_TOKEN
+                    });
 
-                console.log('Player created, setting up container...');
+                    console.log('Player created, setting up container...');
 
-                // Set container
-                await webarPlayer.use('player.container', {
-                    element: document.getElementById('webar')
-                });
+                    // Set container
+                    const container = document.getElementById('webar');
+                    await webarPlayer.use('player.container', { element: container });
 
-                console.log('Container set, starting video stream...');
+                    console.log('Container set, starting video stream...');
 
-                // Start video stream
-                await webarPlayer.use('player.videoStream', {
-                    deviceId: 'auto',
-                    width: 640,
-                    height: 480,
-                    facingMode: 'user'
-                });
+                    // Start video stream with explicit constraints
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user'
+                        }
+                    });
 
-                console.log('Video stream started');
+                    await webarPlayer.use('player.videoStream', { stream });
 
-                // Enable buttons
-                uploadBtn.disabled = false;
-                screenshotBtn.disabled = false;
+                    console.log('Video stream started');
 
-                updateStatus('Ready! Upload an image for face swap.');
+                    // Enable buttons
+                    uploadBtn.disabled = false;
+                    screenshotBtn.disabled = false;
 
-                // Setup event listeners
-                document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
-                document.getElementById('fileInput').onchange = handleImageUpload;
-                document.getElementById('screenshotBtn').onclick = takeScreenshot;
+                    updateStatus('Ready! Upload an image for face swap.');
+
+                    // Setup event listeners
+                    document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+                    document.getElementById('fileInput').onchange = handleImageUpload;
+                    document.getElementById('screenshotBtn').onclick = takeScreenshot;
+
+                } catch (error) {
+                    console.error('Player creation error:', error);
+                    throw error;
+                }
 
             } catch (error) {
                 updateStatus('Error: ' + error.message);
