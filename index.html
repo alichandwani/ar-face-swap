@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Face Swap AR</title>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Banuba SDK dependencies -->
-    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.wasm.js"></script>
-    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.wasm"></script>
-    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.data"></script>
+    <title>Face Swap AR</title>
+    <script src="BanubaClientToken.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -22,25 +20,12 @@
             font-family: Arial, sans-serif;
             overflow: hidden;
         }
-        #status {
-            margin: 20px;
-            font-size: 18px;
-            z-index: 100;
-        }
-        #container {
+        #webar {
             position: relative;
             width: 100%;
             max-width: 640px;
             height: 480px;
             margin: 0 auto;
-        }
-        #webar-canvas {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
         }
         .controls {
             position: fixed;
@@ -77,40 +62,16 @@
         #fileInput {
             display: none;
         }
-        #screenshotPreview {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 2000;
-        }
-        #previewImage {
-            max-width: 90%;
-            max-height: 80vh;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        .preview-controls {
-            position: fixed;
-            bottom: 30px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
+        #status {
+            margin: 20px;
+            font-size: 18px;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
     <div id="status">Loading...</div>
-    <div id="container">
-        <canvas id="webar-canvas"></canvas>
-    </div>
+    <div id="webar"></div>
     
     <div class="controls">
         <button id="uploadBtn" class="btn">
@@ -122,75 +83,39 @@
     </div>
 
     <input type="file" id="fileInput" accept="image/*">
-    
-    <div id="screenshotPreview">
-        <img id="previewImage">
-        <div class="preview-controls">
-            <button class="btn" id="saveBtn">Save</button>
-            <button class="btn" id="retakeBtn" style="background: #f44336;">Retake</button>
-        </div>
-    </div>
 
     <script>
-        const BANUBA_CLIENT_TOKEN = "Qk5CILg4rQ/5pSbj+Eu+QvaGC5c7QhbR8OPr6A3W695OtWDJ+S/uGzQ/GCf3cJdPOAzA8OsVQMH2AITpHk8ZL8YWTz7zXc+ewweTZtIoaXS3SbTq4IPp4FpXOtYax713V2UM99tS7M0EL4dV+FjcXNe7iAZJn+robJqsQ7eAybPaYyCGfPHjVK/r22BRnIW2veoMExJCRjb749WLrgyD4Ff2sS/rAEF5D6mMqb9z45m6L9PxEjJtYMfFRdmYoWrlKbOYpUdkSFLMWA6n/nfOEAklTwRL6oXOfgfiq6M49tZ0u0fPyBZlu8h2Vaxn1rdXNFSHA6u2LjMOqK8NHhbfJEKHg6kwuaKO5OXPN9/I+sFpJIBIaGTlKDpqQ7PM32Gm9S4l2dSV+w/wKLUkG6eschZUcy5KyMIbN01dh5E74vExyjSI8UYwwJ1lm5xYk2xpRCn8bjuy4r1YcXNrAJ9BqD5Q+Hm/KCk/qZ72WGwoXqH//0rLsffdupRA7glsqWCcdUkfSwR8gAS4sDIFGJeQ2sCgDl9M8mmFK7wR97Zb40jWJmtd3wgEbvrY8uDOO/1z3Ja0bPnGV1ObZ/2nQ/wk13ELohMJlTmMvKOPnsj6Gh8bPjJ73s40kXlMknm1Sivw+1vOJw48gkAAhxpq8+pU+5s=";
-        
         const statusElement = document.getElementById('status');
         let webarPlayer = null;
-        let currentEffect = null;
 
         function updateStatus(message) {
             statusElement.textContent = message;
             console.log(message);
         }
 
-        async function initBanubaSDK() {
+        async function initializeBanuba() {
             try {
                 updateStatus('Initializing Banuba SDK...');
 
-                // Wait for SDK to be loaded
-                if (typeof BanubaSDK === 'undefined') {
-                    throw new Error('Banuba SDK not loaded. Please check your internet connection.');
-                }
-
-                // Initialize SDK
-                const player = await BanubaSDK.Player.create({
-                    clientToken: BANUBA_CLIENT_TOKEN,
-                    canvas: document.getElementById('webar-canvas')
+                webarPlayer = await window.Banuba.initialize({
+                    clientToken: window.BANUBA_CLIENT_TOKEN,
+                    container: document.getElementById('webar'),
+                    devicePixelRatio: window.devicePixelRatio || 1
                 });
 
-                // Set player properties
-                player.setRenderSize(640, 480);
-                await player.setVolume(1.0);
-
                 // Start camera
-                const devices = await BanubaSDK.MediaDevices.getCameras();
-                if (devices.length === 0) {
-                    throw new Error('No camera found');
-                }
-
-                // Try to use front camera first
-                const frontCamera = devices.find(device => device.facingMode === 'user') || devices[0];
-                await player.setCameraDevice(frontCamera.deviceId);
-                await player.startCamera();
-
-                // Store player reference
-                webarPlayer = player;
-
+                await webarPlayer.startCamera();
                 updateStatus('Ready! Upload an image for face swap.');
-                setupEventListeners();
+
+                // Setup event listeners
+                document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
+                document.getElementById('fileInput').onchange = handleImageUpload;
+                document.getElementById('screenshotBtn').onclick = takeScreenshot;
 
             } catch (error) {
                 updateStatus('Error initializing SDK: ' + error.message);
                 console.error('Banuba SDK initialization error:', error);
             }
-        }
-
-        function setupEventListeners() {
-            document.getElementById('uploadBtn').onclick = () => document.getElementById('fileInput').click();
-            document.getElementById('fileInput').onchange = handleImageUpload;
-            document.getElementById('screenshotBtn').onclick = takeScreenshot;
-            document.getElementById('saveBtn').onclick = saveScreenshot;
-            document.getElementById('retakeBtn').onclick = closePreview;
         }
 
         async function handleImageUpload(event) {
@@ -201,22 +126,11 @@
             try {
                 updateStatus('Processing image...');
 
-                // Remove previous effect if exists
-                if (currentEffect) {
-                    await webarPlayer.clearEffect();
-                }
-
-                // Create and apply face swap effect
+                // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                const effect = await BanubaSDK.Effect.create({
-                    type: 'face_swap',
-                    parameters: {
-                        image: imageUrl
-                    }
+                await webarPlayer.applyEffect('face_swap', {
+                    image: imageUrl
                 });
-
-                await webarPlayer.applyEffect(effect);
-                currentEffect = effect;
 
                 updateStatus('Face swap active! Make sure your face is visible.');
 
@@ -230,59 +144,25 @@
             if (!webarPlayer) return;
             
             try {
-                const preview = document.getElementById('screenshotPreview');
-                const previewImg = document.getElementById('previewImage');
+                const dataUrl = await webarPlayer.takeScreenshot();
                 
-                // Capture frame
-                const frame = await webarPlayer.takePhoto();
-                previewImg.src = frame;
-                preview.style.display = 'block';
+                // Create download link
+                const link = document.createElement('a');
+                link.download = 'face-swap.png';
+                link.href = dataUrl;
+                link.click();
             } catch (error) {
                 updateStatus('Error taking screenshot: ' + error.message);
                 console.error('Screenshot error:', error);
             }
         }
 
-        function saveScreenshot() {
-            const previewImg = document.getElementById('previewImage');
-            
-            // Try to use the Web Share API for mobile devices
-            if (navigator.share) {
-                fetch(previewImg.src)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const file = new File([blob], 'face-swap.png', { type: 'image/png' });
-                        navigator.share({
-                            files: [file],
-                            title: 'Face Swap'
-                        }).catch(console.error);
-                    });
-            } else {
-                // Fallback for desktop: download the image
-                const link = document.createElement('a');
-                link.download = 'face-swap.png';
-                link.href = previewImg.src;
-                link.click();
-            }
-            
-            closePreview();
-        }
-
-        function closePreview() {
-            document.getElementById('screenshotPreview').style.display = 'none';
-        }
-
-        // Initialize when the SDK is loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initBanubaSDK);
-        } else {
-            initBanubaSDK();
-        }
+        // Initialize when the page loads
+        window.onload = initializeBanuba;
 
         // Cleanup on page unload
-        window.onbeforeunload = async () => {
+        window.onbeforeunload = () => {
             if (webarPlayer) {
-                await webarPlayer.stopCamera();
                 webarPlayer.dispose();
             }
         };
