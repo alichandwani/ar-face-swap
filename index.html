@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Face Swap AR</title>
     <script src="BanubaClientToken.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar/dist/BanubaSDK.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/BanubaSDK.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/BanubaSDK.wasm.js"></script>
     <style>
         body {
             margin: 0;
@@ -95,12 +97,23 @@
 
         async function initializeBanuba() {
             try {
-                updateStatus('Initializing Banuba SDK...');
+                updateStatus('Loading Banuba SDK...');
 
-                webarPlayer = await window.Banuba.initialize({
+                // Wait for SDK to be loaded
+                if (typeof window.Banuba === 'undefined') {
+                    throw new Error('Banuba SDK not loaded. Please check your internet connection.');
+                }
+
+                // Initialize SDK
+                const sdk = await window.Banuba.initialize({
                     clientToken: window.BANUBA_CLIENT_TOKEN,
-                    container: document.getElementById('webar'),
-                    devicePixelRatio: window.devicePixelRatio || 1
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/${file}`
+                });
+
+                // Create player
+                webarPlayer = await window.Banuba.Player.create({
+                    clientToken: window.BANUBA_CLIENT_TOKEN,
+                    container: document.getElementById('webar')
                 });
 
                 // Start camera
@@ -128,10 +141,14 @@
 
                 // Create face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                await webarPlayer.applyEffect('face_swap', {
-                    image: imageUrl
+                const effect = await window.Banuba.Effect.create({
+                    type: 'face_swap',
+                    parameters: {
+                        image: imageUrl
+                    }
                 });
 
+                await webarPlayer.applyEffect(effect);
                 updateStatus('Face swap active! Make sure your face is visible.');
 
             } catch (error) {
@@ -157,8 +174,15 @@
             }
         }
 
-        // Initialize when the page loads
-        window.onload = initializeBanuba;
+        // Wait for SDK to load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                // Small delay to ensure SDK is fully loaded
+                setTimeout(initializeBanuba, 1000);
+            });
+        } else {
+            setTimeout(initializeBanuba, 1000);
+        }
 
         // Cleanup on page unload
         window.onbeforeunload = () => {
