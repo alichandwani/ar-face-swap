@@ -5,8 +5,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Banuba SDK dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/BanubaSDK.browser.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/modules.min.js"></script>
+    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.wasm.js"></script>
+    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.wasm"></script>
+    <script src="https://web-ar-demo.banuba.com/runtime/BanubaSDK.data"></script>
     <style>
         body {
             margin: 0;
@@ -146,31 +147,34 @@
             try {
                 updateStatus('Initializing Banuba SDK...');
 
+                // Wait for SDK to be loaded
+                if (typeof BanubaSDK === 'undefined') {
+                    throw new Error('Banuba SDK not loaded. Please check your internet connection.');
+                }
+
                 // Initialize SDK
-                const modules = await window.Banuba.initialize({
+                const player = await BanubaSDK.Player.create({
                     clientToken: BANUBA_CLIENT_TOKEN,
-                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@banuba/webar@latest/dist/${file}`
+                    canvas: document.getElementById('webar-canvas')
                 });
 
-                // Create WebAR player
-                webarPlayer = await window.Banuba.Player.create({
-                    clientToken: BANUBA_CLIENT_TOKEN,
-                    canvas: document.getElementById('webar-canvas'),
-                    modules
-                });
+                // Set player properties
+                player.setRenderSize(640, 480);
+                await player.setVolume(1.0);
 
-                // Configure player
-                await webarPlayer.setRenderSize(640, 480);
-                await webarPlayer.setVolume(1.0);
-                await webarPlayer.setCameraDevice('user');
+                // Start camera
+                const devices = await BanubaSDK.MediaDevices.getCameras();
+                if (devices.length === 0) {
+                    throw new Error('No camera found');
+                }
 
-                // Start playback
-                await webarPlayer.play();
+                // Try to use front camera first
+                const frontCamera = devices.find(device => device.facingMode === 'user') || devices[0];
+                await player.setCameraDevice(frontCamera.deviceId);
+                await player.startCamera();
 
-                // Initialize face tracking
-                const faceTracker = await modules.getFaceTracker();
-                await faceTracker.setMode('face_tracker_mode_realtime');
-                webarPlayer.addModule(faceTracker);
+                // Store player reference
+                webarPlayer = player;
 
                 updateStatus('Ready! Upload an image for face swap.');
                 setupEventListeners();
@@ -199,14 +203,20 @@
 
                 // Remove previous effect if exists
                 if (currentEffect) {
-                    await webarPlayer.clearEffect(currentEffect);
+                    await webarPlayer.clearEffect();
                 }
 
                 // Create and apply face swap effect
                 const imageUrl = URL.createObjectURL(file);
-                currentEffect = await webarPlayer.applyEffect('face_swap', {
-                    image: imageUrl
+                const effect = await BanubaSDK.Effect.create({
+                    type: 'face_swap',
+                    parameters: {
+                        image: imageUrl
+                    }
                 });
+
+                await webarPlayer.applyEffect(effect);
+                currentEffect = effect;
 
                 updateStatus('Face swap active! Make sure your face is visible.');
 
@@ -223,8 +233,8 @@
                 const preview = document.getElementById('screenshotPreview');
                 const previewImg = document.getElementById('previewImage');
                 
-                // Capture frame using Banuba's API
-                const frame = await webarPlayer.takeScreenshot();
+                // Capture frame
+                const frame = await webarPlayer.takePhoto();
                 previewImg.src = frame;
                 preview.style.display = 'block';
             } catch (error) {
@@ -262,13 +272,18 @@
             document.getElementById('screenshotPreview').style.display = 'none';
         }
 
-        // Initialize when the page loads
-        window.onload = initBanubaSDK;
+        // Initialize when the SDK is loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initBanubaSDK);
+        } else {
+            initBanubaSDK();
+        }
 
         // Cleanup on page unload
         window.onbeforeunload = async () => {
             if (webarPlayer) {
-                await webarPlayer.dispose();
+                await webarPlayer.stopCamera();
+                webarPlayer.dispose();
             }
         };
     </script>
